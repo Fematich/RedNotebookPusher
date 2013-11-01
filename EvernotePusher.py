@@ -89,7 +89,7 @@ class Evernote():
     logger=logging.getLogger('Evernote')
     def __init__(self,auth_token,NOTEBOOK):
         #authentication
-        self.client = EvernoteClient(token=auth_token)
+        self.client = EvernoteClient(token=auth_token, sandbox=False)
         self.userStore = self.client.get_user_store()
         self.noteStore = self.client.get_note_store()
         self.NOTEBOOK=NOTEBOOK

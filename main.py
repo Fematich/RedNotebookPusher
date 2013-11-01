@@ -14,7 +14,7 @@ logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s')
 if __name__ == '__main__':
     logger=logging.getLogger('main')    
     try:
-        settings=json.load(open('settings.json','r'))
+        settings=json.load(open('/home/mfeys/play/RedNotebookPusher/settings.json','r'))
         auth_token=settings['auth_token']
         datadir=settings['datadir']
         NOTEBOOK=settings['NOTEBOOK']

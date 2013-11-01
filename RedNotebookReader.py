@@ -24,7 +24,7 @@ def getUpdates(datadir):
     checks for updates and returns an iterator over the new entries
     currently only supports checking last day and returning these notes    
     '''
-    dateYesterday=datetime.date.today()-datetime.timedelta(16)
+    dateYesterday=datetime.date.today()#-datetime.timedelta(16)
     mth=Month(dateYesterday.year,dateYesterday.month,datadir)
     return mth[dateYesterday.day]
     
