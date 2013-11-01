@@ -3,35 +3,52 @@
 @author:    Matthias Feys (matthiasfeys@gmail.com), IBCN (Ghent University)
 @date:      Thu Oct 31 16:58:49 2013
 """
-import os
+import os,sys, datetime
 import re
 import logging
-
-logger=logging.getLogger('RednotebookReader')
 try:
     import yaml
 except ImportError:
     logging.error('PyYAML not found. Please install python-yaml or PyYAML')
     sys.exit(1)
-    
-def getUpdates():
+
+logger=logging.getLogger('RednotebookReader')
+
+#splitblock=re.compile('\n[=-]{20,}\n')
+splitblock=re.compile('\n={20,}\n')
+titleblock=re.compile('=*(\n)*=+(?P<title>[^=]+)=+\n(?P<content>.*)',re.DOTALL)
+tags=set()
+  
+def getUpdates(datadir):
     '''
     checks for updates and returns an iterator over the new entries
     currently only supports checking last day and returning these notes    
     '''
-
+    dateYesterday=datetime.date.today()-datetime.timedelta(16)
+    mth=Month(dateYesterday.year,dateYesterday.month,datadir)
+    return mth[dateYesterday.day]
+    
 def getNotes(data):
     '''
     given a piece of text it extracts the different entries/notes in it, splitted by a line ------... or =====...
     '''
     # first split different entries
-    notes=[]
+    notes=re.split(splitblock, data)
     # extract the corresponding titles and content 
-    # for layout check pango markup.py in rednotebook and form for evernote
     for note in notes:
-        title=''
-        content=''
-        yield title,content
+        entry={}
+        entry['title']=''
+        mtch=re.match(titleblock,note)
+        if mtch:
+            entry['title']=mtch.group('title')
+            entry['content']=mtch.group('content')
+            if entry['title'] in tags:
+                entry['tags']=entry['title']
+        else:
+            entry['content']=note
+        # for layout check pango markup.py in rednotebook and form for evernote
+        if entry['content']!='':
+            yield entry
     
 class Month():
     '''
@@ -57,71 +74,3 @@ class Month():
             text=''
         return getNotes(text)
         
-def convert_to_pango(txt, headers=None, options=None):
-    '''
-    Code partly taken from txt2tags tarball
-    '''
-    original_txt = txt
-
-    # Here is the marked body text, it must be a list.
-    txt = txt.split('\n')
-
-    # Set the three header fields
-    if headers is None:
-        headers = ['', '', '']
-
-    config = txt2tags.ConfigMaster()._get_defaults()
-
-    config['outfile'] = txt2tags.MODULEOUT  # results as list
-    config['target'] = 'xhtml'
-
-    config['preproc'] = []
-    # We need to escape the ampersand here, otherwise "&amp;" would become
-    # "&amp;amp;"
-    config['preproc'].append([r'&amp;', '&'])
-
-    # Allow line breaks
-    config['postproc'] = []
-    config['postproc'].append([REGEX_LINEBREAK, '\n'])
-
-    if options is not None:
-        config.update(options)
-
-    # Let's do the conversion
-    try:
-        body, toc = txt2tags.convert(txt, config)
-        full_doc = body
-        finished = txt2tags.finish_him(full_doc, config)
-        result = ''.join(finished)
-
-    # Txt2tags error, show the messsage to the user
-    except txt2tags.error, msg:
-        logging.error(msg)
-        result = msg
-
-    # Unknown error, show the traceback to the user
-    except:
-        result = txt2tags.getUnknownErrorMessage()
-        logging.error(result)
-
-    # remove unwanted paragraphs
-    result = result.replace('<p>', '').replace('</p>', '')
-
-    logging.log(5, 'Converted "%s" text to "%s" txt2tags markup' %
-                (repr(original_txt), repr(result)))
-
-    # Remove unknown tags (<a>)
-    def replace_links(match):
-        """Return the link name."""
-        return match.group(1)
-    result = re.sub(REGEX_HTML_LINK, replace_links, result)
-
-    try:
-        attr_list, plain, accel = pango.parse_markup(result)
-
-        # result is valid pango markup, return the markup
-        return result
-    except gobject.GError:
-        # There are unknown tags in the markup, return the original text
-        logging.debug('There are unknown tags in the markup: %s' % result)
-        return original_txt
